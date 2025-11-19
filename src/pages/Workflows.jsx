@@ -12,6 +12,7 @@ const columns = [
 export default function WorkflowsPage(){
   const [tasks, setTasks] = useState([]);
   const [title, setTitle] = useState('');
+  const [drag, setDrag] = useState(null);
 
   const fetchData = async () => {
     try{ const res = await fetch(`${API_BASE}/api/list/task`); setTasks(await res.json()); } catch(e){ console.error(e); }
@@ -26,6 +27,16 @@ export default function WorkflowsPage(){
     fetchData();
   };
 
+  const onDragStart = (t) => setDrag(t);
+  const onDrop = async (colKey) => {
+    if(!drag || drag.state === colKey) return;
+    try {
+      await fetch(`${API_BASE}/api/update/task/${drag._id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ data: { state: colKey } }) });
+      setDrag(null);
+      fetchData();
+    } catch (e) { console.error(e); }
+  };
+
   return (
     <div className="space-y-6">
       <form onSubmit={add} className="flex gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
@@ -35,11 +46,22 @@ export default function WorkflowsPage(){
 
       <div className="grid md:grid-cols-4 gap-4">
         {columns.map(col => (
-          <div key={col.key} className="rounded-xl p-3 bg-white/5 border border-white/10 min-h-[300px]">
+          <div
+            key={col.key}
+            className="rounded-xl p-3 bg-white/5 border border-white/10 min-h-[300px]"
+            onDragOver={(e)=> e.preventDefault()}
+            onDrop={()=> onDrop(col.key)}
+          >
             <div className="text-sm font-medium mb-2">{col.label}</div>
             <div className="space-y-3">
               {tasks.filter(t=>t.state===col.key).map(t => (
-                <div key={t._id} className="rounded-lg p-3" style={{ background:'#112240' }}>
+                <div
+                  key={t._id}
+                  className="rounded-lg p-3 cursor-move"
+                  draggable
+                  onDragStart={()=> onDragStart(t)}
+                  style={{ background:'#112240' }}
+                >
                   <div className="font-medium">{t.title}</div>
                   <div className="text-xs opacity-70">{t.priority}</div>
                 </div>
